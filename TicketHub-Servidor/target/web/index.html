@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicketHub - Login</title>
+    <style>
+        /* aqui van todos los estilos css para que se vea decente, uso flexbox para centrar cosas */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1f2121 0%, #2a3a40 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* estilos para la tarjeta de login flotante */
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-container h1 {
+            color: #208090;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .login-container p {
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #208090;
+            box-shadow: 0 0 5px rgba(32, 128, 144, 0.3);
+        }
+
+        /* estilo base para los botones */
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #208090;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #186b7b;
+        }
+
+        .error {
+            color: #f44336;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .success {
+            color: #4caf50;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* el dashboard empieza oculto hasta que nos logueamos */
+        .dashboard {
+            display: none;
+        }
+
+        /* estilos para la barra superior y el layout principal */
+        .header {
+            background-color: #1f2121;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #208090;
+            font-size: 28px;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .logout-btn:hover {
+            background-color: #da190b;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* barra lateral con botones de accion */
+        .sidebar {
+            width: 200px;
+            background-color: #f5f5f5;
+            padding: 20px;
+            min-height: calc(100vh - 80px);
+        }
+
+        .sidebar button {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #208090;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .sidebar button:hover {
+            background-color: #186b7b;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .main-content h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .tabla-container {
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #1f2121;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* etiquetas de colores segun el estado del ticket */
+        .estado {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .estado.abierto {
+            background-color: #4caf50;
+        }
+
+        .estado.en-proceso {
+            background-color: #ff9800;
+        }
+
+        .estado.cerrado {
+            background-color: #f44336;
+        }
+
+        .acciones {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .acciones button {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin: 0;
+            background-color: #208090;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .acciones button:hover {
+            background-color: #186b7b;
+        }
+
+        .btn-en-proceso {
+            background-color: #ff9800 !important;
+        }
+
+        .btn-en-proceso:hover {
+            background-color: #e68900 !important;
+        }
+
+        .btn-cerrado {
+            background-color: #f44336 !important;
+        }
+
+        .btn-cerrado:hover {
+            background-color: #da190b !important;
+        }
+
+        /* alertas flotantes */
+        .mensaje {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .mensaje.exito {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .mensaje.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        /* media query para que se vea bien en celulares */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                display: flex;
+                gap: 10px;
+                padding: 10px;
+                min-height: auto;
+            }
+
+            .sidebar button {
+                flex: 1;
+                margin-bottom: 0;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+
+            .acciones {
+                flex-direction: column;
+            }
+
+            .acciones button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-container">
+    <h1>TicketHub</h1>
+    <p>Sistema de Gestion de Tickets</p>
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="usuario">Usuario:</label>
+            <input type="text" id="usuario" name="usuario" required>
+        </div>
+        <div class="form-group">
+            <label for="contrasena">Contraseña:</label>
+            <input type="password" id="contrasena" name="contrasena" required>
+        </div>
+        <button type="submit">Entrar</button>
+        <div id="loginError" class="error"></div>
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999;">
+            <strong>Demo:</strong><br>
+            juan / 1234<br>
+            maria / 1234<br>
+            carlos / 1234
+        </div>
+    </form>
+</div>
+
+<div id="dashboard" class="dashboard">
+    <div class="header">
+        <div>
+            <h1>TicketHub</h1>
+        </div>
+        <div class="user-info">
+            <p id="tecnicoNombre">Tecnico: --</p>
+            <p id="tecnicoEspecialidad">Especialidad: --</p>
+            <button class="logout-btn" onclick="logout()">Salir</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <button onclick="cargarTickets()">Refrescar</button>
+            <button onclick="mostrarNuevoTicket()">+ Nuevo Ticket</button>
+            <button onclick="mirarMisTickets()">Mis Tickets</button>
+        </div>
+
+        <div class="main-content">
+            <h2 id="tituloSeccion">Todos los Tickets</h2>
+            <div id="mensaje" class="mensaje"></div>
+
+            <div class="tabla-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titulo</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Tecnico Asignado</th>
+                            <th>Creado en</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: #999;">Cargando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // detecto automaticamente donde esta corriendo el servidor para armar la url base
+    const API_URL = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port;
+    let tecnicoActual = null;
+    let mostrarSoloMios = false;
+
+    // LOGIN
+    // capturo el evento submit del formulario para evitar que recargue la pagina y hacerlo por ajax
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const usuario = document.getElementById('usuario').value;
+        const contrasena = document.getElementById('contrasena').value;
+
+        try {
+            // llamo al endpoint de login que cree en el servidor java
+            const res = await fetch(API_URL + '/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, contrasena })
+            });
+
+            const data = await res.json();
+
+            if (data.ok) {
+                // si el login es correcto, guardo los datos del tecnico en memoria
+                tecnicoActual = {
+                    id: data.id_tecnico,
+                    nombre: data.nombre,
+                    especialidad: data.especialidad
+                };
+
+                // escondo el login y muestro el dashboard
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('tecnicoNombre').textContent = 'Tecnico: ' + data.nombre;
+                document.getElementById('tecnicoEspecialidad').textContent = 'Especialidad: ' + data.especialidad;
+
+                // cargo los tickets iniciales y activo el intervalo para que se refresque solo cada 3 segundos
+                cargarTickets();
+                setInterval(cargarTickets, 3000);
+            } else {
+                document.getElementById('loginError').textContent = data.msg || 'Error desconocido';
+            }
+        } catch (e) {
+            document.getElementById('loginError').textContent = 'Error de conexion: ' + e.message;
+        }
+    });
+
+    // CARGAR TICKETS
+    // esta es la funcion principal que trae los datos del servidor y dibuja la tabla
+    async function cargarTickets() {
+        try {
+            const res = await fetch(API_URL + '/tickets');
+            const data = await res.json();
+
+            const tbody = document.getElementById('tickets');
+            tbody.innerHTML = '';
+
+            if (data.tickets && data.tickets.length > 0) {
+                let tickets = data.tickets;
+
+                // filtro localmente si el usuario activo el boton de "ver solo mis tickets"
+                if (mostrarSoloMios) {
+                    tickets = tickets.filter(t => t.id_tecnico === tecnicoActual.id);
+                    document.getElementById('tituloSeccion').textContent = 'Mis Tickets (' + tickets.length + ')';
+                } else {
+                    document.getElementById('tituloSeccion').textContent = 'Todos los Tickets (' + data.tickets.length + ')';
+                }
+
+                // recorro cada ticket y construyo el html de la fila dinamicamente
+                tickets.forEach(t => {
+                    let estadoClase = 'abierto';
+                    if (t.estado === 'EN_PROCESO') estadoClase = 'en-proceso';
+                    if (t.estado === 'CERRADO') estadoClase = 'cerrado';
+
+                    let tecnicoNombre = 'Sin asignar';
+                    if (t.id_tecnico) {
+                        tecnicoNombre = 'T#' + t.id_tecnico;
+                    }
+
+                    let botones = '';
+                    // logica visual: solo muestro botones de accion si el ticket es mio o si nadie lo tiene
+                    if (t.id_tecnico === null || t.id_tecnico === tecnicoActual.id) {
+                        botones = `
+                            <button onclick="asignarse(${t.id})" style="background-color: #ff9800;">Asignarme</button>
+                            <button class="btn-en-proceso" onclick="cambiarEstado(${t.id}, 'EN_PROCESO')">En Proceso</button>
+                            <button class="btn-cerrado" onclick="cambiarEstado(${t.id}, 'CERRADO')">Cerrar</button>
+                        `;
+                    } else {
+                        botones = '<em style="color: #999;">Asignado a otro</em>';
+                    }
+
+                    // inserto la fila en la tabla usando template literals
+                    const row = `
+                        <tr>
+                            <td>${t.id}</td>
+                            <td>${t.titulo}</td>
+                            <td><span class="estado ${estadoClase}">${t.estado}</span></td>
+                            <td>${t.prioridad}</td>
+                            <td>${tecnicoNombre}</td>
+                            <td>${t.creado_en}</td>
+                            <td>
+                                <div class="acciones">
+                                    ${botones}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No hay tickets</td></tr>';
+            }
+        } catch (e) {
+            mostrarMensaje('Error al cargar tickets: ' + e.message, 'error');
+        }
+    }
+
+    // ASIGNARSE A UN TICKET
+    // envia una peticion PUT para actualizar el campo id_tecnico del ticket
+    async function asignarse(id) {
+        try {
+            const res = await fetch(API_URL + '/tickets/' + id + '/asignar', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_tecnico: tecnicoActual.id })
+            });
+
+            if (res.ok) {
+                mostrarMensaje('Te asignaste al ticket ' + id, 'exito');
+                cargarTickets();
+            } else {
+                mostrarMensaje('Error al asignarse', 'error');
+            }
+        } catch (e) {
+            mostrarMensaje('Error: ' + e.message, 'error');
+        }
+    }
+
+    // CAMBIAR ESTADO
+    // reutilizo esta funcion para mover tickets a en proceso o cerrado
+    async function cambiarEstado(id, nuevoEstado) {
+        try {
+            const res = await fetch(API_URL + '/tickets/' + id + '/estado', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+
+            if (res.ok) {
+                mostrarMensaje('Ticket ' + id + ' cambio a ' + nuevoEstado, 'exito');
+                cargarTickets();
+            } else {
+                mostrarMensaje('Error al cambiar estado', 'error');
+            }
+        } catch (e) {
+            mostrarMensaje('Error: ' + e.message, 'error');
+        }
+    }
+
+    // CREAR NUEVO TICKET
+    // uso prompts sencillos del navegador por ahora para capturar datos rapido
+    function mostrarNuevoTicket() {
+        const titulo = prompt('Titulo del ticket:');
+        if (!titulo) return;
+
+        const descripcion = prompt('Descripcion (opcional):');
+        crearTicket(titulo, descripcion || '');
+    }
+
+    async function crearTicket(titulo, descripcion) {
+        try {
+            const res = await fetch(API_URL + '/tickets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    titulo: titulo,
+                    descripcion: descripcion,
+                    id_cliente: null,
+                    id_categoria: null
+                })
+            });
+
+            const data = await res.json();
+            if (data.ok) {
+                mostrarMensaje('Ticket creado con ID: ' + data.id, 'exito');
+                cargarTickets();
+            } else {
+                mostrarMensaje('Error al crear ticket', 'error');
+            }
+        } catch (e) {
+            mostrarMensaje('Error: ' + e.message, 'error');
+        }
+    }
+
+    // VER SOLO MIS TICKETS
+    // cambio la bandera y recargo la tabla para aplicar el filtro visual
+    function mirarMisTickets() {
+        mostrarSoloMios = !mostrarSoloMios;
+        cargarTickets();
+    }
+
+    // LOGOUT
+    // simplemente reinicio las variables y vuelvo a mostrar el login
+    function logout() {
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('loginForm').reset();
+        document.getElementById('loginError').textContent = '';
+        tecnicoActual = null;
+        mostrarSoloMios = false;
+    }
+
+    // funcion auxiliar para mostrar alertas bonitas que desaparecen solas
+    function mostrarMensaje(texto, tipo) {
+        const div = document.getElementById('mensaje');
+        div.textContent = texto;
+        div.className = 'mensaje ' + tipo;
+
+        setTimeout(() => {
+            div.className = 'mensaje';
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>
