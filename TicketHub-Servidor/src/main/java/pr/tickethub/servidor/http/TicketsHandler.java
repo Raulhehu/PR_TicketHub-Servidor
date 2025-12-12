@@ -93,9 +93,15 @@ public class TicketsHandler implements HttpHandler {
             send(ex, 400, "{\"ok\":false,\"msg\":\"titulo requerido\"}");
             return;
         }
-
+        /*upgrade*/
         // guardo en base de datos y retorno el id generado
         int id = dao.crear(titulo, descripcion, idCliente, idCategoria);
+        
+        // Parche: Actualizar a EN_ESPERA justo despues de crear
+        // (O idealmente modificar el DAO para aceptar estado, 
+        // pero esto funciona sin tocar el DAO de momento)
+        actualizarCampo(id, "estado", "EN_ESPERA");
+        
         JSONObject res = new JSONObject();
         res.put("ok", true);
         res.put("id", id);
@@ -158,6 +164,33 @@ public class TicketsHandler implements HttpHandler {
             }
         } else {
             send(ex, 400, "{\"ok\":false,\"msg\":\"accion desconocida\"}");
+        }
+    }
+    
+// Metodo helper para no repetir tanto codigo SQL
+    private void actualizarCampo(int id, String columna, String valor) throws Exception {
+        /*upgrade: validar columna para evitar inyeccion SQL, aqui solo permito estado o prioridad*/ 
+        if (!columna.equals("estado") && !columna.equals("prioridad")) return;
+
+        String sql = "update tickets set " + columna + " = ? where id = ?";
+        try (Connection c = ConexionBD.obtener();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, valor);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+    }
+
+    /*upgrade*/
+    private void actualizarCampoInt(int id, String columna, int valor) throws Exception {
+        if (!columna.equals("id_tecnico")) return;
+
+        String sql = "update tickets set " + columna + " = ? where id = ?";
+        try (Connection c = ConexionBD.obtener();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, valor);
+            ps.setInt(2, id);
+            ps.executeUpdate();
         }
     }
 
