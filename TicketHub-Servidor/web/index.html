@@ -5,347 +5,180 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TicketHub - Login</title>
     <style>
-        /* aqui van todos los estilos css para que se vea decente, uso flexbox para centrar cosas */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
-            font-family: Arial, sans-serif;
+            /*upgrade*/
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #1f2121 0%, #2a3a40 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            min-height: 100vh; display: flex;
+            justify-content: center;  align-items: center;
         }
 
-        /* estilos para la tarjeta de login flotante */
         .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 400px;
+            background: white; padding: 40px; /*upgrade*/
+            border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 100%;  max-width: 400px;  margin: 20px;
         }
 
-        .login-container h1 {
-            color: #208090;
-            margin-bottom: 10px;
-            font-size: 32px;
-        }
-
-        .login-container p {
-            color: #999;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: bold;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #208090;
-            box-shadow: 0 0 5px rgba(32, 128, 144, 0.3);
-        }
-
-        /* estilo base para los botones */
+        /*upgrade para reduir tamaño */
+        .login-container h1 { color: #208090; margin-bottom: 10px; font-size: 32px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
         button {
-            width: 100%;
-            padding: 12px;
-            background-color: #208090;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
+            width: 100%; padding: 12px; background-color: #208090; color: white;
+            border: none; border-radius: 4px; font-size: 16px; cursor: pointer;
+            transition: 0.3s;
         }
+        button:hover { background-color: #186b7b; }
+        .error { color: #f44336; margin-top: 10px; font-size: 14px; }
 
-        button:hover {
-            background-color: #186b7b;
-        }
-
-        .error {
-            color: #f44336;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-
-        .success {
-            color: #4caf50;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-
-        /* el dashboard empieza oculto hasta que nos logueamos */
-        .dashboard {
-            display: none;
-        }
-
-        /* estilos para la barra superior y el layout principal */
+        /*upgrade nuevamente para reducir tamaño*/
+        .dashboard { display: none; width: 100%; height: 100vh; flex-direction: column; }
         .header {
-            background-color: #1f2121;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            background-color: #1f2121; color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
+        .container { display: flex; flex: 1; overflow: hidden; }
 
-        .header h1 {
-            color: #208090;
-            font-size: 28px;
-        }
-
-        .user-info {
-            text-align: right;
-        }
-
-        .user-info p {
-            margin: 0;
-            font-size: 14px;
-            color: #aaa;
-        }
-
-        .logout-btn {
-            padding: 8px 16px;
-            background-color: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .logout-btn:hover {
-            background-color: #da190b;
-        }
-
-        .container {
-            display: flex;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        /* barra lateral con botones de accion */
+        /*upgrade nuevamente para lo mismo, esto principalmente lo hago*/
+        /*upgrade para reducir el tamaño en la documentacion y para */
+        /*upgrade mejorar visiblemente la vista */
         .sidebar {
-            width: 200px;
-            background-color: #f5f5f5;
-            padding: 20px;
-            min-height: calc(100vh - 80px);
+            width: 220px; background-color: #f0f2f5; padding: 20px;
+            display: flex; flex-direction: column; gap: 10px;
+            border-right: 1px solid #ddd;
         }
-
         .sidebar button {
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #208090;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
+            background-color: white; color: #333; border: 1px solid #ddd;
+            text-align: left; padding: 12px; font-size: 14px;
         }
+        .sidebar button:hover { background-color: #e9ecef; border-color: #208090; color: #208090; }
+        .sidebar button.active { background-color: #208090; color: white; border-color: #208090; }
 
-        .sidebar button:hover {
-            background-color: #186b7b;
+        /*upgrade: algo nuevo para el superadmin*/
+        /* Boton especial ADMIN */
+        #btnAdmin {
+            background-color: #2c3e50; color: #f1c40f; border: 1px solid #f1c40f;
+            display: none; /* Oculto por defecto */
         }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            background-color: #f9f9f9;
-        }
-
-        .main-content h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-
+        #btnAdmin:hover { background-color: #34495e; }        
+        
+        /*upgrade*/
+        /* MAIN CONTENT */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; background-color: #f8f9fa; }
         .tabla-container {
-            background: white;
-            border-radius: 4px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background-color: #2c3e50; color: white; padding: 15px; text-align: left; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        tr:hover { background-color: #f8f9fa; }
+
+        /*upgrade Aqui agregamos nuevos campos para la tabla prioridad*/
+        /*upgrade y se les cambio la sintaxis*/
+        /* ESTADOS Y PRIORIDADES */
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        
+        .st-espera { background-color: #78909c; color: white; } /* Gris azulado */
+        .st-proceso { background-color: #ff9800; color: #212121; } /* Naranja */
+        .st-cerrado { background-color: #4caf50; color: #003300; } /* Verde - Ojo, cambie cerrado a verde (exito) */
+
+        .pr-baja { background-color: #81c784; color: #1b5e20; }
+        .pr-media { background-color: #ffb74d; color: #e65100; }
+        .pr-alta { background-color: #e57373; color: #b71c1c; }
+
+        
+        /*upgrade Esto es lo antes mencionado se le agregaron finciones nuevas a la tabla*/
+        /* BOTONES DE ACCION EN TABLA */
+        .acciones { display: flex; flex-direction: column; gap: 4px; }
+        .grupo-botones { display: flex; gap: 2px; }
+        .btn-mini {
+            padding: 4px; font-size: 10px; border-radius: 2px; border: none;
+            cursor: pointer; color: white; flex: 1;
+        }
+        .btn-azul { background-color: #2196f3; }
+        .btn-naranja { background-color: #ff9800; }
+        .btn-verde { background-color: #4caf50; }
+        .btn-gris { background-color: #607d8b; }
+        
+        .mensaje { padding: 10px; margin-bottom: 15px; border-radius: 4px; display: none; text-align: center;}
+        .mensaje.exito { background-color: #d4edda; color: #155724; }
+        .mensaje.error { background-color: #f8d7da; color: #721c24; }
+
+        /*upgrade: lo nuevo solo para el superadmin antes mencionado*/
+        /* VISTA ADMIN */
+        #adminPanel { display: none; }
+        .admin-card {
+            background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;
+            border-left: 5px solid #f1c40f;
+        }
+            
+
+        html {
+            font-size: 14px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background-color: #1f2121;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: bold;
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        /* etiquetas de colores segun el estado del ticket */
-        .estado {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-        }
-
-        .estado.abierto {
-            background-color: #4caf50;
-        }
-
-        .estado.en-proceso {
-            background-color: #ff9800;
-        }
-
-        .estado.cerrado {
-            background-color: #f44336;
-        }
-
-        .acciones {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-
-        .acciones button {
-            padding: 6px 12px;
-            font-size: 12px;
-            margin: 0;
-            background-color: #208090;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        .acciones button:hover {
-            background-color: #186b7b;
-        }
-
-        .btn-en-proceso {
-            background-color: #ff9800 !important;
-        }
-
-        .btn-en-proceso:hover {
-            background-color: #e68900 !important;
-        }
-
-        .btn-cerrado {
-            background-color: #f44336 !important;
-        }
-
-        .btn-cerrado:hover {
-            background-color: #da190b !important;
-        }
-
-        /* alertas flotantes */
-        .mensaje {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            display: none;
-        }
-
-        .mensaje.exito {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
-        }
-
-        .mensaje.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-
-        /* media query para que se vea bien en celulares */
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                display: flex;
-                gap: 10px;
-                padding: 10px;
-                min-height: auto;
-            }
-
-            .sidebar button {
-                flex: 1;
-                margin-bottom: 0;
-            }
-
-            table {
+        @media (max-width: 600px) {
+            html {
                 font-size: 12px;
             }
+        }
 
-            th, td {
-                padding: 8px;
-            }
+        /*upgrade: A partir de aqui inician las reglas responsivas*/    
+        @media (max-width: 480px) {
+            .header     { flex-direction: column; text-align: center; padding: 10px;}
+            .header h1  { font-size: 1.2rem; }
+            .user-info  { text-align: center; width: 100%; }
+            .logout-btn { width: 100%; }
+            .container  { flex-direction: column; }
+            .sidebar    {width: 100% !important; flex-direction: row; min-height: auto;}
+            .main-content {  padding: 10px; }
 
-            .acciones {
-                flex-direction: column;
-            }
+            table { font-size: 0.75rem; }
+            th, td {  padding: 6px; }
 
-            .acciones button {
-                width: 100%;
-            }
+            .acciones button { font-size: 0.65rem; padding: 4px 6px; }
+            .estado { font-size: 0.65rem; padding: 2px 4px;}
+        }
+
+        @media (min-width: 481px) and (max-width: 768px) {
+            .sidebar { width: 100% !important; flex-direction: row; min-height: auto; }
+            .container { flex-direction: column; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 8px; }
+            .main-content { padding: 12px; }
+        }
+
+        @media (min-width: 769px) {
+            table {font-size: 0.9rem; }
+            th, td { padding: 12px; }
+            .main-content { padding: 20px; }
         }
     </style>
 </head>
 <body>
 
+<!-- PANTALLA DE LOGIN -->
 <div id="loginScreen" class="login-container">
     <h1>TicketHub</h1>
-    <p>Sistema de Gestion de Tickets</p>
+    <p>Acceso al Sistema</p>
     <form id="loginForm">
         <div class="form-group">
-            <label for="usuario">Usuario:</label>
-            <input type="text" id="usuario" name="usuario" required>
+            <label>Usuario</label>
+            <input type="text" id="usuario" required placeholder="Ej: raul">
         </div>
         <div class="form-group">
-            <label for="contrasena">Contraseña:</label>
-            <input type="password" id="contrasena" name="contrasena" required>
+            <label>Contraseña</label>
+            <input type="password" id="contrasena" required>
         </div>
-        <button type="submit">Entrar</button>
+        <button type="submit">Iniciar Sesion</button>
         <div id="loginError" class="error"></div>
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999;">
             <strong>Demo:</strong><br>
@@ -356,61 +189,84 @@
     </form>
 </div>
 
+<!-- PANTALLA DEL DASHBOARD -->
 <div id="dashboard" class="dashboard">
     <div class="header">
-        <div>
-            <h1>TicketHub</h1>
-        </div>
+        <h1>TicketHub <span style="font-size: 14px; opacity: 0.6;">v2.0</span></h1>
         <div class="user-info">
             <p id="tecnicoNombre">Tecnico: --</p>
             <p id="tecnicoEspecialidad">Especialidad: --</p>
-            <button class="logout-btn" onclick="logout()">Salir</button>
+            <a href="#" onclick="logout()" style="color: #ff8a80; font-size: 12px;">Cerrar Sesion</a>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <button onclick="cargarTickets()">Refrescar</button>
-            <button onclick="mostrarNuevoTicket()">+ Nuevo Ticket</button>
-            <button onclick="mirarMisTickets()">Mis Tickets</button>
+            <button onclick="cambiarVista('todos')" class="active" id="navTodos">► Todos los Tickets</button>
+            <button onclick="cambiarVista('mios')" id="navMios">► Mis Tickets</button>
+            <button onclick="mostrarNuevoTicket()">(Nuevo Ticket</button>
+            
+            <button onclick="cambiarVista('admin')" id="btnAdmin">☻️ Super Admin</button>
         </div>
 
         <div class="main-content">
-            <h2 id="tituloSeccion">Todos los Tickets</h2>
             <div id="mensaje" class="mensaje"></div>
-
-            <div class="tabla-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Titulo</th>
-                            <th>Estado</th>
-                            <th>Prioridad</th>
-                            <th>Tecnico Asignado</th>
-                            <th>Creado en</th>
-                            <th>Acciones</th>
+            
+            <div id="vistaTickets">
+                <h2 id="tituloSeccion">Tablero de Control</h2>
+                <div class="tabla-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="5%">ID</th>
+                                <th width="25%">Titulo</th>
+                                <th width="10%">Estado</th>
+                                <th width="10%">Prioridad</th>
+                                <th width="15%">Tecnico</th>
+                                <th width="15%">Fecha</th>
+                                <th width="20%">Gestionar</th>
                         </tr>
                     </thead>
-                    <tbody id="tickets">
+                    <tbody id="ticketsBody">
                         <tr>
                             <td colspan="7" style="text-align: center; color: #999;">Cargando...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            </div>
+
+            <div id="adminPanel">
+                <h2>🛡️ Panel de Super Administrador</h2>
+                <div class="admin-card">
+                    <h3>Resumen del Sistema</h3>
+                    <p>Bienvenido, <strong>Raul</strong>. Tienes acceso total.</p>
+                    <br>
+                    <button onclick="alert('Funcionalidad de Admin: Reporte generado')" style="width: auto; background: #34495e;">📄 Generar Reporte PDF</button>
+                    <button onclick="alert('Limpieza de cache realizada')" style="width: auto; background: #e74c3c;">🗑️ Limpiar Logs del Servidor</button>
+                </div>
+                <div class="admin-card">
+                    <h3>Usuarios Registrados</h3>
+                    <p>Aqui se podran ver y borrar usuarios (Proximamente).</p>
+                    <ul>
+                        <li>Raul (Super Admin)</li>
+                        <li>Juan (Tecnico)</li>
+                        <li>Maria (Tecnico)</li>
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
 <script>
-    // detecto automaticamente donde esta corriendo el servidor para armar la url base
+    // Detectar automaticamente la URL del servidor
     const API_URL = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port;
     let tecnicoActual = null;
-    let mostrarSoloMios = false;
+    let vistaActual = 'todos';
 
     // LOGIN
-    // capturo el evento submit del formulario para evitar que recargue la pagina y hacerlo por ajax
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -418,7 +274,6 @@
         const contrasena = document.getElementById('contrasena').value;
 
         try {
-            // llamo al endpoint de login que cree en el servidor java
             const res = await fetch(API_URL + '/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -428,102 +283,159 @@
             const data = await res.json();
 
             if (data.ok) {
-                // si el login es correcto, guardo los datos del tecnico en memoria
                 tecnicoActual = {
-                    id: data.id_tecnico,
-                    nombre: data.nombre,
-                    especialidad: data.especialidad
-                };
-
-                // escondo el login y muestro el dashboard
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                document.getElementById('tecnicoNombre').textContent = 'Tecnico: ' + data.nombre;
-                document.getElementById('tecnicoEspecialidad').textContent = 'Especialidad: ' + data.especialidad;
-
-                // cargo los tickets iniciales y activo el intervalo para que se refresque solo cada 3 segundos
-                cargarTickets();
-                setInterval(cargarTickets, 3000);
+                    id: data.id_tecnico,             nombre: data.nombre,
+                    especialidad: data.especialidad, user: usuario };
+                /*upgrade vamos a cambiar un poco la funcion de cargar tickets para despues*/
+                iniciarSesion();
             } else {
-                document.getElementById('loginError').textContent = data.msg || 'Error desconocido';
+                document.getElementById('loginError').textContent = data.msg;
             }
-        } catch (e) {
-            document.getElementById('loginError').textContent = 'Error de conexion: ' + e.message;
-        }
+        } catch(e) { console.error(e); }
     });
+    
+    /*upgrade: nueva funcion para hacer servir al superadmin, en DAW se manejaba*/
+    /*upgrade: diferente con los session*/
+    
+    function iniciarSesion() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'flex'; // Flex para layout
+        document.getElementById('tecnicoNombre').textContent = tecnicoActual.nombre;
+        document.getElementById('tecnicoEspecialidad').textContent = tecnicoActual.especialidad;
 
+        // VERIFICACION DE SUPER ADMIN
+        if (tecnicoActual.user === 'raul') {
+            document.getElementById('btnAdmin').style.display = 'block';
+        }
+
+        cargarTickets();
+        setInterval(cargarTickets, 3000); // Auto refresh
+    }
+
+    // --- NAVEGACION ---
+    function cambiarVista(vista) {
+        vistaActual = vista;
+        
+        // Reset botones sidebar
+        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+        
+        if (vista === 'admin') {
+            document.getElementById('btnAdmin').classList.add('active');
+            document.getElementById('vistaTickets').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+        } else {
+            document.getElementById('vistaTickets').style.display = 'block';
+            document.getElementById('adminPanel').style.display = 'none';
+            if (vista === 'todos') document.getElementById('navTodos').classList.add('active');
+            if (vista === 'mios') document.getElementById('navMios').classList.add('active');
+            cargarTickets();
+        }
+    }
+    
     // CARGAR TICKETS
-    // esta es la funcion principal que trae los datos del servidor y dibuja la tabla
     async function cargarTickets() {
         try {
             const res = await fetch(API_URL + '/tickets');
             const data = await res.json();
 
-            const tbody = document.getElementById('tickets');
+            const tbody = document.getElementById('ticketsBody');
             tbody.innerHTML = '';
 
-            if (data.tickets && data.tickets.length > 0) {
-                let tickets = data.tickets;
+            let tickets = data.tickets;
+            if (vistaActual === 'mios') {
+                tickets = tickets.filter(t => t.id_tecnico === tecnicoActual.id);
+                document.getElementById('tituloSeccion').textContent = 'Mis Tickets Asignados';
+            } else {
+                document.getElementById('tituloSeccion').textContent = 'Tablero de Control - Todos';
+            }
 
-                // filtro localmente si el usuario activo el boton de "ver solo mis tickets"
-                if (mostrarSoloMios) {
-                    tickets = tickets.filter(t => t.id_tecnico === tecnicoActual.id);
-                    document.getElementById('tituloSeccion').textContent = 'Mis Tickets (' + tickets.length + ')';
+            if (tickets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">No hay tickets disponibles</td></tr>';
+                return;
+            }
+                /*upgrade:*/
+                tickets.forEach(t => {
+                    let stClass = 'st-espera';
+                    if (t.estado === 'EN_PROCESO') stClass = 'en-proceso';
+                    if (t.estado === 'CERRADO') stClass = 'cerrado';
+                    
+                    let prClass = 'baja';
+                    if (t.prioridad === 'Media') prClass = 'pr-media';
+                    if (t.prioridad === 'Alta') prClass = 'pr-alta';
+                    
+                    // Nombre tecnico
+                    let tecName = '<span style="color:#999;">-- Libre --</span>';
+                    if (t.id_tecnico) tecName = (t.id_tecnico === tecnicoActual.id) ? '<strong>(YO)</strong>' : `Tec. #${t.id_tecnico}`;
+
+                    /*upgrade*/
+                    let botones = '';
+                    // Si es admin (raul) o el ticket es mio o esta libre, puedo tocarlo
+                    const soyAdmin = (tecnicoActual.user === 'raul');    
+                    const tengoPermiso = (tecnicoActual.user === 'raul' || t.id_tecnico === tecnicoActual.id || t.id_tecnico === null);
+
+                    if (tengoPermiso) {
+                    //upgrade: Boton Asignar
+                    let btnAsignar = `<button class="btn-mini btn-azul" onclick="asignar(${t.id})">️ Tomar</button>`;
+                    if (t.id_tecnico) btnAsignar = ''; // Si ya tiene dueño no muestro boton tomar (salvo logica extra)
+
+                    //upgrade: Botones Estado (Siempre visibles para cambiar cuando quieras)
+                    let btnsEstado = `
+                        <div class="grupo-botones" style="margin-top:2px;">
+                            <button class="btn-mini btn-gris" onclick="cambiarEstado(${t.id}, 'EN_ESPERA')" title="Poner en Espera">⏳</button>
+                            <button class="btn-mini btn-naranja" onclick="cambiarEstado(${t.id}, 'EN_PROCESO')" title="Trabajar">🔨</button>
+                            <button class="btn-mini btn-verde" onclick="cambiarEstado(${t.id}, 'CERRADO')" title="Finalizar">✅</button>
+                        </div>
+                    `;
+
+                    //upgrade: Botones Prioridad para poder hacer los cambios de lo que se a agregado
+                    let btnsPrioridad = `
+                        <div class="grupo-botones" style="margin-top:4px;">
+                            <button class="btn-mini pr-baja" onclick="cambiarPrioridad(${t.id}, 'Baja')">⮯baja</button>
+                            <button class="btn-mini pr-media" onclick="cambiarPrioridad(${t.id}, 'Media')">➥media</button>
+                            <button class="btn-mini pr-alta" onclick="cambiarPrioridad(${t.id}, 'Alta')">⮭alta</button>
+                        </div>
+                    `;
+
+                    controles = `<div class="acciones">${btnAsignar} ${btnsEstado} ${btnsPrioridad}</div>`;
                 } else {
-                    document.getElementById('tituloSeccion').textContent = 'Todos los Tickets (' + data.tickets.length + ')';
+                    controles = '<small style="color:#999;">X Bloqueado X</small>';
                 }
 
-                // recorro cada ticket y construyo el html de la fila dinamicamente
-                tickets.forEach(t => {
-                    let estadoClase = 'abierto';
-                    if (t.estado === 'EN_PROCESO') estadoClase = 'en-proceso';
-                    if (t.estado === 'CERRADO') estadoClase = 'cerrado';
-
-                    let tecnicoNombre = 'Sin asignar';
-                    if (t.id_tecnico) {
-                        tecnicoNombre = 'T#' + t.id_tecnico;
-                    }
-
-                    let botones = '';
-                    // logica visual: solo muestro botones de accion si el ticket es mio o si nadie lo tiene
-                    if (t.id_tecnico === null || t.id_tecnico === tecnicoActual.id) {
-                        botones = `
-                            <button onclick="asignarse(${t.id})" style="background-color: #ff9800;">Asignarme</button>
-                            <button class="btn-en-proceso" onclick="cambiarEstado(${t.id}, 'EN_PROCESO')">En Proceso</button>
-                            <button class="btn-cerrado" onclick="cambiarEstado(${t.id}, 'CERRADO')">Cerrar</button>
-                        `;
-                    } else {
-                        botones = '<em style="color: #999;">Asignado a otro</em>';
-                    }
-
-                    // inserto la fila en la tabla usando template literals
                     const row = `
-                        <tr>
-                            <td>${t.id}</td>
-                            <td>${t.titulo}</td>
-                            <td><span class="estado ${estadoClase}">${t.estado}</span></td>
-                            <td>${t.prioridad}</td>
-                            <td>${tecnicoNombre}</td>
-                            <td>${t.creado_en}</td>
-                            <td>
-                                <div class="acciones">
-                                    ${botones}
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No hay tickets</td></tr>';
-            }
-        } catch (e) {
-            mostrarMensaje('Error al cargar tickets: ' + e.message, 'error');
-        }
+                    <tr>
+                        <td><b>#${t.id}</b></td>
+                        <td>${t.titulo}</td>
+                        <td><span class="badge ${stClass}">${t.estado || 'EN_ESPERA'}</span></td>
+                        <td><span class="badge ${prClass}">${t.prioridad || 'Baja'}</span></td>
+                        <td>${tecName}</td>
+                        <td style="font-size:11px; color:#666;">${t.creado_en}</td>
+                        <td>${controles}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        } catch(e) { console.error(e); }
     }
 
-    // ASIGNARSE A UN TICKET
-    // envia una peticion PUT para actualizar el campo id_tecnico del ticket
+
+    /*
+     * 
+     * @param {type} id
+     * @returns {undefined}
+     * 
+     * Faltan muchas modificaciones a estas funciones siguientes, pero por
+     * el momento asi lo dejamos para poder continuar en otro momento
+     * 
+     * -Cambiar asignarse pora que pueda ser util tambien con superadmin y 
+     * sepa el id_tecnico atual y hacerlo mas sencillo para 
+     * 
+     * 
+     */
+    
+    
+    
+// ASIGNARSE A UN TICKET
     async function asignarse(id) {
         try {
             const res = await fetch(API_URL + '/tickets/' + id + '/asignar', {
@@ -544,7 +456,6 @@
     }
 
     // CAMBIAR ESTADO
-    // reutilizo esta funcion para mover tickets a en proceso o cerrado
     async function cambiarEstado(id, nuevoEstado) {
         try {
             const res = await fetch(API_URL + '/tickets/' + id + '/estado', {
@@ -565,7 +476,6 @@
     }
 
     // CREAR NUEVO TICKET
-    // uso prompts sencillos del navegador por ahora para capturar datos rapido
     function mostrarNuevoTicket() {
         const titulo = prompt('Titulo del ticket:');
         if (!titulo) return;
@@ -600,14 +510,12 @@
     }
 
     // VER SOLO MIS TICKETS
-    // cambio la bandera y recargo la tabla para aplicar el filtro visual
     function mirarMisTickets() {
         mostrarSoloMios = !mostrarSoloMios;
         cargarTickets();
     }
 
     // LOGOUT
-    // simplemente reinicio las variables y vuelvo a mostrar el login
     function logout() {
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('dashboard').style.display = 'none';
@@ -617,7 +525,7 @@
         mostrarSoloMios = false;
     }
 
-    // funcion auxiliar para mostrar alertas bonitas que desaparecen solas
+    // MOSTRAR MENSAJES
     function mostrarMensaje(texto, tipo) {
         const div = document.getElementById('mensaje');
         div.textContent = texto;
