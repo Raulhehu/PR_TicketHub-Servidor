@@ -17,34 +17,25 @@ public class TicketDAO {
 
             ps.setString(1, titulo);
             ps.setString(2, descripcion);
+            /*upgrade: para el Tomar ticket*/
+            ps.setObject(3, idCliente);
+            ps.setObject(4, idCategoria);
             
-            // esto es importante, verifico si el id del cliente viene nulo
-            // si es null tengo que usar setNull especificamente, sino java muere al intentar meter null en un entero
-            if (idCliente == null) {
-                ps.setNull(3, Types.INTEGER);
-            } else {
-                ps.setInt(3, idCliente);
-            }
+            ps.executeUpdate();
             
-            // hago lo mismo para la categoria, por si el ticket no tiene categoria asignada aun
-            if (idCategoria == null) {
-                ps.setNull(4, Types.INTEGER);
-            } else {
-                ps.setInt(4, idCategoria);
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) return rs.getInt(1);
             }
-
-            // ejecuto como query porque espero que me regrese el id
-            ResultSet rs = ps.executeQuery();
-            rs.next();
-            return rs.getInt(1);
         }
+        return -1;
     }
 
     // metodo para sacar toda la lista de tickets para mostrarla en la interfaz
     public List<Map<String,Object>> listar() throws SQLException {
+        /*upgrade*/
+        List<Map<String, Object>> lista = new ArrayList<>();
         // los ordeno descendente para ver primero los mas recientes
-        String sql = "select t.id, t.titulo, t.estado, t.prioridad, t.creado_en " +
-                     "from tickets t order by t.id desc";
+        String sql = "SELECT id, titulo, estado, prioridad, id_tecnico, creado_en FROM tickets ORDER BY id DESC";
         
         try (Connection c = ConexionBD.obtener();
              PreparedStatement ps = c.prepareStatement(sql);
@@ -60,6 +51,8 @@ public class TicketDAO {
                 m.put("titulo", rs.getString("titulo"));
                 m.put("estado", rs.getString("estado"));
                 m.put("prioridad", rs.getString("prioridad"));
+                /*upgrade:*/
+                m.put("id_tecnico", rs.getObject("id_tecnico"));
                 // convierto la fecha a string directo para no batallar con formatos luego
                 m.put("creado_en", rs.getTimestamp("creado_en").toString());
                 out.add(m);
@@ -67,4 +60,64 @@ public class TicketDAO {
             return out;
         }
     }
+    
+    //Metodo para obtener la lista de tecnicos (para el dropdown)
+    public List<Map<String, Object>> listarTecnicos() throws Exception {
+        List<Map<String, Object>> lista = new ArrayList<>();
+        String sql = "SELECT id_tecnico, nombre FROM tecnicos WHERE activo = true";
+        try (Connection c = ConexionBD.obtener();
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", rs.getInt("id_tecnico"));
+                m.put("nombre", rs.getString("nombre"));
+                lista.add(m);
+            }
+        }
+        return lista;
+    }
+
+    /*upgrade importante: se agrego este metodo para poder registrar nuevos empleados 
+        puesto que esta aplicacion es solo y unicamente para los tecnicos
+        no elabore un sign up y unicamente el login para los que estan trabajando*/
+    //metodo para CREAR un tecnico nuevo y su usuario de login al mismo tiempo
+    public boolean crearTecnicoCompleto(String nombre, String especialidad, String usuario, String pass) throws Exception {
+        Connection c = null;
+        try {
+            c = ConexionBD.obtener();
+            c.setAutoCommit(false); // Iniciamos transaccion manual
+
+            // Insertamos en la tabla tecnicos
+            String sqlTec = "INSERT INTO tecnicos (nombre, especialidad) VALUES (?, ?)";
+            int idTecnico = -1;
+            try (PreparedStatement ps = c.prepareStatement(sqlTec, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, nombre);
+                ps.setString(2, especialidad);
+                ps.executeUpdate();
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) idTecnico = rs.getInt(1);
+                }
+            }
+
+            //Insertar en tabla usuarios_login
+            String sqlUser = "INSERT INTO usuarios_login (id_tecnico, usuario, contrasena) VALUES (?, ?, ?)";
+            try (PreparedStatement ps = c.prepareStatement(sqlUser)) {
+                ps.setInt(1, idTecnico);
+                ps.setString(2, usuario);
+                ps.setString(3, pass);
+                ps.executeUpdate();
+            }
+
+            c.commit(); // Todo salio bien, guardamos cambios
+            return true;
+        } catch (Exception e) {
+            if (c != null) c.rollback(); // Si algo falla, deshacemos todo
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (c != null) { c.setAutoCommit(true); c.close(); }
+        }
+    }
+    
 }
