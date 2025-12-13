@@ -53,63 +53,107 @@ public class TicketsHandler implements HttpHandler {
         }
     }
 
-    // metodo para listar los tickets, es sencillo: saca del dao y manda json
+// metodo para listar, aqui decido si devuelvo tickets o la lista de tecnicos
     private void handleGet(HttpExchange ex) throws Exception {
-        List<Map<String,Object>> lista = dao.listar();
-        JSONArray arr = new JSONArray(lista);
+        String path = ex.getRequestURI().getPath(); // saco la ruta
         JSONObject res = new JSONObject();
         res.put("ok", true);
-        res.put("tickets", arr);
+
+        // si la url dice 'tecnicos', entonces voy al dao a pedir la lista de empleados
+        if (path.contains("/tecnicos")) {
+            List<Map<String,Object>> lista = dao.listarTecnicos();
+            res.put("tecnicos", new JSONArray(lista));
+        } else {
+            // si no, asumo que quieren los tickets de siempre
+            List<Map<String,Object>> lista = dao.listar();
+            res.put("tickets", new JSONArray(lista));
+        }
+        
         sendJson(ex, 200, res.toString());
     }
 
-    // metodo para crear un ticket nuevo
+  // este es el metodo principal para cuando me llega un POST, aqui decido si es para ticket o tecnico
     private void handlePost(HttpExchange ex) throws Exception {
-        // leo todo el json que me manda el cliente
+        String path = ex.getRequestURI().getPath();
+
+        // primero reviso si la ruta trae 'tecnicos', si es asi, lo mando a la funcion de crear tecnico
+        if (path.contains("/tecnicos")) {
+            handlePostTecnico(ex);
+            return; // corto aqui para que no siga ejecutando la logica de tickets
+        }
+
+        //upgrade AQUI EMPIEZA LA LOGICA PARA CREAR UN TICKET
+        
+        // leo lo que me manda el cliente en el body y lo paso a string
         String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         JSONObject in = new JSONObject(body);
 
         String titulo = in.optString("titulo", "");
         String descripcion = in.optString("descripcion", "");
 
-        // esta parte es delicada: verifico si mandan id_cliente y si no es nulo
-        // json tiene su propio tipo de null (JSONObject.NULL) que es diferente al null de java
-        // asi que valido ambos casos para evitar errores al convertir a entero
+        // aqui tengo cuidado con los nulos de json vs java para el id_cliente
         Object cliObj = in.opt("id_cliente");
         Integer idCliente = null;
         if (cliObj != null && !JSONObject.NULL.equals(cliObj)) {
             idCliente = ((Number) cliObj).intValue();
         }
 
-        // hago lo mismo para la categoria, extrayendo el valor solo si es valido
+        // hago lo mismo para la categoria, solo lo convierto si trae algo valido
         Object catObj = in.opt("id_categoria");
         Integer idCategoria = null;
         if (catObj != null && !JSONObject.NULL.equals(catObj)) {
             idCategoria = ((Number) catObj).intValue();
         }
 
-        // validacion minima, sin titulo no creo nada
+        // si no me mandan titulo, les regreso error porque es obligatorio
         if (titulo.isBlank()) {
             send(ex, 400, "{\"ok\":false,\"msg\":\"titulo requerido\"}");
             return;
         }
-        /*upgrade*/
-        // guardo en base de datos y retorno el id generado
+
+        // mando guardar a la base de datos y recupero el id que se genero
         int id = dao.crear(titulo, descripcion, idCliente, idCategoria);
         
-        // Parche: Actualizar a EN_ESPERA justo despues de crear
-        // (O idealmente modificar el DAO para aceptar estado, 
-        // pero esto funciona sin tocar el DAO de momento)
+        // parche rapido: le pongo estado EN_ESPERA manual apenas se crea
         actualizarCampo(id, "estado", "EN_ESPERA");
         
+        // armo la respuesta json con el id nuevo y digo que todo salio bien
         JSONObject res = new JSONObject();
         res.put("ok", true);
         res.put("id", id);
         sendJson(ex, 201, res.toString());
     }
 
+    // UPGRADE aQUI CONTROLO LA CREACION DE TECNICOS
+    private void handlePostTecnico(HttpExchange ex) throws Exception {
+        // igual que arriba, leo el json que me llega
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        JSONObject in = new JSONObject(body);
+
+        String nombre = in.optString("nombre", "");
+        String especialidad = in.optString("especialidad", "");
+        String usuario = in.optString("usuario", "");
+        String contrasena = in.optString("contrasena", "");
+
+        // valido que no falten los datos importantes para el login
+        if (nombre.isBlank() || usuario.isBlank() || contrasena.isBlank()) {
+            send(ex, 400, "{\"ok\":false,\"msg\":\"Faltan datos obligatorios (nombre, usuario, pass)\"}");
+            return;
+        }
+
+        // aqui llamo a mi dao especial que usa transacciones para guardar tecnico y usuario juntos
+        boolean exito = dao.crearTecnicoCompleto(nombre, especialidad, usuario, contrasena);
+
+        if (exito) {
+            sendJson(ex, 201, "{\"ok\":true, \"msg\":\"Tecnico creado exitosamente\"}");
+        } else {
+            // si algo trono en la base de datos (como usuario duplicado), aviso del error
+            send(ex, 500, "{\"ok\":false,\"msg\":\"Error al crear tecnico en base de datos\"}");
+        }
+    }
+    
     // metodo para actualizar tickets, ya sea estado o tecnico
-    private void handlePut(HttpExchange ex, String path) throws Exception {
+private void handlePut(HttpExchange ex, String path) throws Exception {
         // necesito partir la url para sacar el id, ej: /tickets/2/estado
         String[] partes = path.split("/");
         if (partes.length < 3) {
@@ -145,6 +189,7 @@ public class TicketsHandler implements HttpHandler {
                     send(ex, 404, "{\"ok\":false}");
                 }
             }
+
         } else if (path.contains("/asignar")) {
             // logica para asignar un tecnico
             int idTecnico = in.getInt("id_tecnico");
@@ -162,6 +207,31 @@ public class TicketsHandler implements HttpHandler {
                     send(ex, 404, "{\"ok\":false}");
                 }
             }
+
+        } else if (path.contains("/prioridad")) { 
+            //upgrade: Logica para cambiar la prioridad
+            String nuevaPrioridad = in.optString("prioridad", "");
+            
+            if (nuevaPrioridad.isBlank()) {
+                send(ex, 400, "{\"ok\":false,\"msg\":\"prioridad requerida\"}");
+                return;
+            }
+
+            String sql = "update tickets set prioridad = ? where id = ?";
+            try (Connection c = ConexionBD.obtener();
+                 PreparedStatement ps = c.prepareStatement(sql)) {
+                ps.setString(1, nuevaPrioridad);
+                ps.setInt(2, idTicket);
+                int updated = ps.executeUpdate();
+
+                if (updated > 0) {
+                    sendJson(ex, 200, "{\"ok\":true}");
+                } else {
+                    send(ex, 404, "{\"ok\":false}");
+                }
+            }
+            // --------------------------------------------------
+
         } else {
             send(ex, 400, "{\"ok\":false,\"msg\":\"accion desconocida\"}");
         }
