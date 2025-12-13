@@ -24,6 +24,9 @@ public class MainServidor {
         // es decir, le digo al servidor que codigo ejecutar cuando alguien entra a /login o /tickets
         server.createContext("/login", new LoginHandler());
         server.createContext("/tickets", new TicketsHandler());
+        
+        /*upgrade: para el tema de los tecnicos*/
+        server.createContext("/tecnicos", new TicketsHandler());
         // este ultimo maneja los archivos estaticos como html o css en la raiz
         server.createContext("/", new StaticFileHandler());
 
