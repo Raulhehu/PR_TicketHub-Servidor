@@ -236,23 +236,37 @@
             </div>
             </div>
 
+            <!--upgrade: se hicieron cambios en esa seccion para poder agregar desde este panel 
+                como ya se comentaba antes  -->
             <div id="adminPanel">
                 <h2>🛡️ Panel de Super Administrador</h2>
+                
+                <div class="admin-card">
+                    <h3>👤 Registrar Nuevo Técnico</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label>Nombre Completo:</label>
+                            <input type="text" id="newNombre" placeholder="Ej: Anais Quijano">
+                        </div>
+                        <div>
+                            <label>Especialidad:</label>
+                            <input type="text" id="newEsp" placeholder="Ej: Redes">
+                        </div>
+                        <div>
+                            <label>Usuario Login:</label>
+                            <input type="text" id="newUser" placeholder="Ej: anais">
+                        </div>
+                        <div>
+                            <label>Contraseña:</label>
+                            <input type="password" id="newPass" placeholder="*****">
+                        </div>
+                    </div>
+                    <button onclick="crearTecnico()" style="margin-top:15px; width:auto;">💾 Guardar Técnico</button>
+                </div>
+
                 <div class="admin-card">
                     <h3>Resumen del Sistema</h3>
-                    <p>Bienvenido, <strong>Raul</strong>. Tienes acceso total.</p>
-                    <br>
-                    <button onclick="alert('Funcionalidad de Admin: Reporte generado')" style="width: auto; background: #34495e;">📄 Generar Reporte PDF</button>
-                    <button onclick="alert('Limpieza de cache realizada')" style="width: auto; background: #e74c3c;">🗑️ Limpiar Logs del Servidor</button>
-                </div>
-                <div class="admin-card">
-                    <h3>Usuarios Registrados</h3>
-                    <p>Aqui se podran ver y borrar usuarios (Proximamente).</p>
-                    <ul>
-                        <li>Raul (Super Admin)</li>
-                        <li>Juan (Tecnico)</li>
-                        <li>Maria (Tecnico)</li>
-                    </ul>
+                     <button onclick="alert('Limpieza realizada')" style="width: auto; background: #e74c3c;">🗑️ Limpiar Logs</button>
                 </div>
             </div>
 
@@ -265,6 +279,8 @@
     const API_URL = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port;
     let tecnicoActual = null;
     let vistaActual = 'todos';
+    // Variable global para guardar la lista de tecnicos
+    let listaTecnicos = [];
 
     // LOGIN
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -309,7 +325,7 @@
         }
 
         cargarTickets();
-        setInterval(cargarTickets, 3000); // Auto refresh
+        setInterval(cargarTickets, 7000); // Auto refresh
     }
 
     // --- NAVEGACION ---
@@ -332,16 +348,29 @@
         }
     }
     
+    /*upgrade: */
+    async function cargarListaTecnicos() {
+        try {
+            const res = await fetch(API_URL + '/tecnicos');
+            const data = await res.json();
+            if(data.ok) listaTecnicos = data.tecnicos;
+        } catch(e) { console.error(e); }
+    }
+    
     // CARGAR TICKETS
     async function cargarTickets() {
+        if (vistaActual === 'admin') return;
+        
+        // Primero aseguramos tener la lista de tecnicos actualizada
+        if(listaTecnicos.length === 0) await cargarListaTecnicos();
+        
         try {
             const res = await fetch(API_URL + '/tickets');
             const data = await res.json();
-
-            const tbody = document.getElementById('ticketsBody');
+            const tbody = document.getElementById('ticketsBody') || document.getElementById('tickets');
             tbody.innerHTML = '';
-
             let tickets = data.tickets;
+            
             if (vistaActual === 'mios') {
                 tickets = tickets.filter(t => t.id_tecnico === tecnicoActual.id);
                 document.getElementById('tituloSeccion').textContent = 'Mis Tickets Asignados';
@@ -350,53 +379,67 @@
             }
 
             if (tickets.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">No hay tickets disponibles</td></tr>';
-                return;
-            }
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">No hay tickets disponibles</td></tr>';
+            return;
+        }
                 /*upgrade:*/
                 tickets.forEach(t => {
                     let stClass = 'st-espera';
-                    if (t.estado === 'EN_PROCESO') stClass = 'en-proceso';
-                    if (t.estado === 'CERRADO') stClass = 'cerrado';
+                    if (t.estado === 'EN_PROCESO') stClass = 'st-proceso';
+                    if (t.estado === 'CERRADO') stClass = 'st-cerrado';
                     
-                    let prClass = 'baja';
-                    if (t.prioridad === 'Media') prClass = 'pr-media';
-                    if (t.prioridad === 'Alta') prClass = 'pr-alta';
+                    let prClass = 'pr-baja';
+                    if (t.prioridad === 'Media' || t.prioridad === 'MEDIA') prClass = 'pr-media';
+                    if (t.prioridad === 'Alta' || t.prioridad === 'ALTA') prClass = 'pr-alta';
                     
                     // Nombre tecnico
                     let tecName = '<span style="color:#999;">-- Libre --</span>';
                     if (t.id_tecnico) tecName = (t.id_tecnico === tecnicoActual.id) ? '<strong>(YO)</strong>' : `Tec. #${t.id_tecnico}`;
 
                     /*upgrade*/
-                    let botones = '';
-                    // Si es admin (raul) o el ticket es mio o esta libre, puedo tocarlo
-                    const soyAdmin = (tecnicoActual.user === 'raul');    
+                    let controles = '';
+                    // Si es admin (raul por el momento) o el ticket es mio o esta libre, puedo tocarlo
                     const tengoPermiso = (tecnicoActual.user === 'raul' || t.id_tecnico === tecnicoActual.id || t.id_tecnico === null);
 
                     if (tengoPermiso) {
-                    //upgrade: Boton Asignar
-                    let btnAsignar = `<button class="btn-mini btn-azul" onclick="asignar(${t.id})">️ Tomar</button>`;
-                    if (t.id_tecnico) btnAsignar = ''; // Si ya tiene dueño no muestro boton tomar (salvo logica extra)
-
-                    //upgrade: Botones Estado (Siempre visibles para cambiar cuando quieras)
-                    let btnsEstado = `
-                        <div class="grupo-botones" style="margin-top:2px;">
-                            <button class="btn-mini btn-gris" onclick="cambiarEstado(${t.id}, 'EN_ESPERA')" title="Poner en Espera">⏳</button>
-                            <button class="btn-mini btn-naranja" onclick="cambiarEstado(${t.id}, 'EN_PROCESO')" title="Trabajar">🔨</button>
-                            <button class="btn-mini btn-verde" onclick="cambiarEstado(${t.id}, 'CERRADO')" title="Finalizar">✅</button>
-                        </div>
-                    `;
+                        /*upgrade: nueva logica para la asigancion*/
+                        let bloqueAsignar = '';
+                    // Si soy Admin o el ticket esta libre, muestro el selector
+                    if (tecnicoActual.user === 'raul' || !t.id_tecnico) {
+                        // Creamos el dropdown con los tecnicos
+                        let opciones = listaTecnicos.map(tec => 
+                            `<option value="${tec.id}">${tec.nombre}</option>`
+                        ).join('');
+                        
+                        bloqueAsignar = `
+                            <div style="display:flex; gap:2px; margin-bottom:4px;">
+                                <select id="sel-${t.id}" style="font-size:10px; width: 80px;">
+                                    <option value="${tecnicoActual.id}">A mí</option>
+                                    ${opciones}
+                                </select>
+                                <button class="btn-mini btn-azul" onclick="asignarSeleccionado(${t.id})">Ir</button>
+                            </div>
+                        `;
+                    }
+                        //upgrade: Botones Estado (Siempre visibles para cambiar cuando quieras)
+                        let btnsEstado = `
+                            <div class="grupo-botones" style="margin-top:2px;">
+                                <button class="btn-mini btn-gris" onclick="cambiarEstado(${t.id}, 'EN_ESPERA')" title="Poner en Espera">⏳</button>
+                                <button class="btn-mini btn-naranja" onclick="cambiarEstado(${t.id}, 'EN_PROCESO')" title="Trabajar">🔨</button>
+                                <button class="btn-mini btn-verde" onclick="cambiarEstado(${t.id}, 'CERRADO')" title="Finalizar">✅</button>
+                            </div>
+                        `;
 
                     //upgrade: Botones Prioridad para poder hacer los cambios de lo que se a agregado
                     let btnsPrioridad = `
                         <div class="grupo-botones" style="margin-top:4px;">
-                            <button class="btn-mini pr-baja" onclick="cambiarPrioridad(${t.id}, 'Baja')">⮯baja</button>
-                            <button class="btn-mini pr-media" onclick="cambiarPrioridad(${t.id}, 'Media')">➥media</button>
-                            <button class="btn-mini pr-alta" onclick="cambiarPrioridad(${t.id}, 'Alta')">⮭alta</button>
+                            <button class="btn-mini pr-baja" onclick="cambiarPrioridad(${t.id}, 'BAJA')">⮯baja</button>
+                            <button class="btn-mini pr-media" onclick="cambiarPrioridad(${t.id}, 'MEDIA')">➥media</button>
+                            <button class="btn-mini pr-alta" onclick="cambiarPrioridad(${t.id}, 'ALTA')">⮭alta</button>
                         </div>
                     `;
 
-                    controles = `<div class="acciones">${btnAsignar} ${btnsEstado} ${btnsPrioridad}</div>`;
+                    controles = `<div class="acciones">${bloqueAsignar} ${btnsEstado} ${btnsPrioridad}</div>`;
                 } else {
                     controles = '<small style="color:#999;">X Bloqueado X</small>';
                 }
@@ -406,18 +449,19 @@
                         <td><b>#${t.id}</b></td>
                         <td>${t.titulo}</td>
                         <td><span class="badge ${stClass}">${t.estado || 'EN_ESPERA'}</span></td>
-                        <td><span class="badge ${prClass}">${t.prioridad || 'Baja'}</span></td>
+                        <td><span class="badge ${prClass}">${t.prioridad || 'BAJA'}</span></td>
                         <td>${tecName}</td>
-                        <td style="font-size:11px; color:#666;">${t.creado_en}</td>
+                        <td style="font-size:11px;">${t.creado_en}</td>
                         <td>${controles}</td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
             });
 
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error("Error dibujando tabla:", e); // Esto saldrá en F12 si falla algo}
     }
-
+}
 
     /*
      * 
@@ -436,104 +480,106 @@
     
     
 // ASIGNARSE A UN TICKET
-    async function asignarse(id) {
-        try {
-            const res = await fetch(API_URL + '/tickets/' + id + '/asignar', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_tecnico: tecnicoActual.id })
-            });
+    /* upgrade: ACCIONES DE API*/
 
-            if (res.ok) {
-                mostrarMensaje('Te asignaste al ticket ' + id, 'exito');
-                cargarTickets();
-            } else {
-                mostrarMensaje('Error al asignarse', 'error');
-            }
-        } catch (e) {
-            mostrarMensaje('Error: ' + e.message, 'error');
-        }
+async function asignarSeleccionado(idTicket) {
+        // Obtenemos el ID del tecnico seleccionado en el dropdown especifico de este ticket
+        const select = document.getElementById('sel-' + idTicket);
+        const idTecnico = select.value;
+        
+        await fetchAPI(`/tickets/${idTicket}/asignar`, 'PUT', { id_tecnico: parseInt(idTecnico) });
+        notificar('Ticket reasignado correctamente', 'exito');
     }
 
-    // CAMBIAR ESTADO
-    async function cambiarEstado(id, nuevoEstado) {
+    async function crearTecnico() {
+        const nombre = document.getElementById('newNombre').value;
+        const esp = document.getElementById('newEsp').value;
+        const user = document.getElementById('newUser').value;
+        const pass = document.getElementById('newPass').value;
+
+        if(!nombre || !user || !pass) return alert("Faltan datos");
+
         try {
-            const res = await fetch(API_URL + '/tickets/' + id + '/estado', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: nuevoEstado })
-            });
-
-            if (res.ok) {
-                mostrarMensaje('Ticket ' + id + ' cambio a ' + nuevoEstado, 'exito');
-                cargarTickets();
-            } else {
-                mostrarMensaje('Error al cambiar estado', 'error');
-            }
-        } catch (e) {
-            mostrarMensaje('Error: ' + e.message, 'error');
-        }
-    }
-
-    // CREAR NUEVO TICKET
-    function mostrarNuevoTicket() {
-        const titulo = prompt('Titulo del ticket:');
-        if (!titulo) return;
-
-        const descripcion = prompt('Descripcion (opcional):');
-        crearTicket(titulo, descripcion || '');
-    }
-
-    async function crearTicket(titulo, descripcion) {
-        try {
-            const res = await fetch(API_URL + '/tickets', {
+            const res = await fetch(API_URL + '/tecnicos', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    titulo: titulo,
-                    descripcion: descripcion,
-                    id_cliente: null,
-                    id_categoria: null
-                })
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ nombre, especialidad: esp, usuario: user, contrasena: pass })
             });
-
             const data = await res.json();
-            if (data.ok) {
-                mostrarMensaje('Ticket creado con ID: ' + data.id, 'exito');
-                cargarTickets();
+            
+            if(data.ok) {
+                notificar('Tecnico registrado con exito', 'exito');
+                // Limpiar form
+                document.getElementById('newNombre').value = '';
+                document.getElementById('newUser').value = '';
+                document.getElementById('newPass').value = '';
+                cargarListaTecnicos(); // Recargar lista para que salga en los dropdowns
             } else {
-                mostrarMensaje('Error al crear ticket', 'error');
+                alert("Error al crear: " + data.msg);
             }
-        } catch (e) {
-            mostrarMensaje('Error: ' + e.message, 'error');
+        } catch(e) { console.error(e); }
+    }
+
+
+    async function cambiarEstado(id, estado) {
+        await fetchAPI(`/tickets/${id}/estado`, 'PUT', { estado: estado });
+        notificar(`Estado cambiado a ${estado}`, 'exito');
+    }
+
+    async function cambiarPrioridad(id, prioridad) {
+        await fetchAPI(`/tickets/${id}/prioridad`, 'PUT', { prioridad: prioridad });
+        notificar(`Prioridad cambiada a ${prioridad}`, 'exito');
+    }
+
+    async function mostrarNuevoTicket() {
+        const titulo = prompt("Titulo del problema:");
+        if(!titulo) return;
+        const desc = prompt("Descripcion adicional:");
+        
+        await fetchAPI('/tickets', 'POST', {
+            titulo: titulo, 
+            descripcion: desc || "",
+            id_cliente: null,
+            id_categoria: null
+        });
+        notificar('Ticket creado en estado EN_ESPERA', 'exito');
+    }
+
+    // Funcion generica para fetch
+    async function fetchAPI(endpoint, method, body) {
+        try {
+            await fetch(API_URL + endpoint, {
+                method: method,
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(body)
+            });
+            // Si el servidor nos dice que hubo error (ej: 400 o 500)
+            if (!res.ok) {
+                const errorData = await res.json();
+                console.error("Error API:", errorData); // Ver en consola con F12
+                notificar('Error del servidor: ' + (errorData.msg || res.statusText), 'error');
+                return; // Detenemos aqui para no recargar en falso
+            }
+
+            // Si todo salio bien
+            cargarTickets(); 
+            
+        } catch(e) {
+            console.error(e);
+            notificar('Error de conexion (Revisa la consola con F12)', 'error');
         }
     }
 
-    // VER SOLO MIS TICKETS
-    function mirarMisTickets() {
-        mostrarSoloMios = !mostrarSoloMios;
-        cargarTickets();
-    }
-
-    // LOGOUT
-    function logout() {
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('loginForm').reset();
-        document.getElementById('loginError').textContent = '';
-        tecnicoActual = null;
-        mostrarSoloMios = false;
-    }
-
-    // MOSTRAR MENSAJES
-    function mostrarMensaje(texto, tipo) {
+    function notificar(msg, tipo) {
         const div = document.getElementById('mensaje');
-        div.textContent = texto;
+        div.textContent = msg;
         div.className = 'mensaje ' + tipo;
+        div.style.display = 'block';
+        setTimeout(() => div.style.display = 'none', 3000);
+    }
 
-        setTimeout(() => {
-            div.className = 'mensaje';
-        }, 3000);
+    function logout() {
+        location.reload(); // Manera mas facil de limpiar todo
     }
 </script>
 
