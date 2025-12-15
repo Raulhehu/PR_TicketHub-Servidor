@@ -9,6 +9,7 @@ import java.util.*;
 import org.json.*;
 import pr.tickethub.servidor.bd.TicketDAO;
 import pr.tickethub.servidor.bd.ConexionBD;
+import pr.tickethub.servidor.bd.Seguridad;
 
 // esta clase es el cerebro de mi api para los tickets, decide que hacer segun el metodo http que llegue
 public class TicketsHandler implements HttpHandler {
@@ -114,6 +115,16 @@ public class TicketsHandler implements HttpHandler {
         // mando guardar a la base de datos y recupero el id que se genero
         int id = dao.crear(titulo, descripcion, idCliente, idCategoria);
         
+        //Nuevo upgrade para poder hacer las notificaiones UDP
+        try{
+            pr.tickethub.servidor.udp.TicketHubNotificadorUDP udp =
+                    new pr.tickethub.servidor.udp.TicketHubNotificadorUDP("localhost", 9091);
+            udp.enviar("NUEVO_TICKET: " +id);
+            System.out.println("Notificacion UDP enviada.");
+        } catch (Exception e) {
+            System.out.println("No se pudo enviar UDP (no es critico): " + e.getMessage());
+        }
+        
         // parche rapido: le pongo estado EN_ESPERA manual apenas se crea
         actualizarCampo(id, "estado", "EN_ESPERA");
         
@@ -133,22 +144,26 @@ public class TicketsHandler implements HttpHandler {
         String nombre = in.optString("nombre", "");
         String especialidad = in.optString("especialidad", "");
         String usuario = in.optString("usuario", "");
-        String contrasena = in.optString("contrasena", "");
+        String contrasenaPlana = in.optString("contrasena", "");
 
         // valido que no falten los datos importantes para el login
-        if (nombre.isBlank() || usuario.isBlank() || contrasena.isBlank()) {
+        if (nombre.isBlank() || usuario.isBlank() || contrasenaPlana.isBlank()) {
             send(ex, 400, "{\"ok\":false,\"msg\":\"Faltan datos obligatorios (nombre, usuario, pass)\"}");
             return;
         }
-
+        
+        // upgrade: antes de guardar, encripto la contraseña para que en la BD se vea como garabatos
+        String passEncriptada = Seguridad.encriptar(contrasenaPlana);
+        
         // aqui llamo a mi dao especial que usa transacciones para guardar tecnico y usuario juntos
-        boolean exito = dao.crearTecnicoCompleto(nombre, especialidad, usuario, contrasena);
+        // upgrade: ahora mando la encriptada al DAO en vez de la original
+        boolean exito = dao.crearTecnicoCompleto(nombre, especialidad, usuario, passEncriptada);
+        
 
         if (exito) {
             sendJson(ex, 201, "{\"ok\":true, \"msg\":\"Tecnico creado exitosamente\"}");
         } else {
-            // si algo trono en la base de datos (como usuario duplicado), aviso del error
-            send(ex, 500, "{\"ok\":false,\"msg\":\"Error al crear tecnico en base de datos\"}");
+            send(ex, 500, "{\"ok\":false,\"msg\":\"Error al crear tecnico\"}");
         }
     }
     
@@ -230,7 +245,6 @@ private void handlePut(HttpExchange ex, String path) throws Exception {
                     send(ex, 404, "{\"ok\":false}");
                 }
             }
-            // --------------------------------------------------
 
         } else {
             send(ex, 400, "{\"ok\":false,\"msg\":\"accion desconocida\"}");
