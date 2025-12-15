@@ -8,7 +8,6 @@ public class TicketDAO {
 
     // metodo para guardar un ticket nuevo en la bd
     public int crear(String titulo, String descripcion, Integer idCliente, Integer idCategoria) throws SQLException {
-        // uso returning id, que es una funcion de postgres para que me devuelva el id generado en la misma consulta
         String sql = "insert into tickets(titulo, descripcion, id_cliente, id_categoria) " +
                      "values(?,?,?,?)";
         
@@ -121,3 +120,4 @@ public class TicketDAO {
     }
     
 }
+
