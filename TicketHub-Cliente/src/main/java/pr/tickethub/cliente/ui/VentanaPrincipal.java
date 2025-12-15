@@ -3,7 +3,10 @@ package pr.tickethub.cliente.ui;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.nio.charset.StandardCharsets;
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.Socket;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +18,9 @@ import pr.tickethub.cliente.net.TicketHubAPIClient;
 // esta es la clase principal donde armo toda la interfaz grafica usando swing
 public class VentanaPrincipal extends JFrame {
 
+    // defino la url base de mi api para usarla en todo el codigo y no repetirla
+    private static final String BASE_URL = "http://localhost:8081";
+    
     private JTable tabla;
     private DefaultTableModel modelo;
     private JLabel lblTotal;
@@ -22,7 +28,7 @@ public class VentanaPrincipal extends JFrame {
 
     // defino mi paleta de colores aqui para usarlos facil en todos los componentes y mantener el estilo
     private static final Color COLOR_HEADER = new Color(31, 33, 33);     // gris oscuro
-    private static final Color COLOR_ACCENT = new Color(33, 128, 141);    // teal
+    private static final Color COLOR_ACCENT = new Color(32, 128, 144);    // teal
     private static final Color COLOR_BG = new Color(252, 252, 249);       // crema
     private static final Color COLOR_TEXT = new Color(19, 52, 59);        // azul oscuro
     private static final Color COLOR_BUTTON = new Color(33, 128, 141);    // teal
@@ -44,6 +50,9 @@ public class VentanaPrincipal extends JFrame {
         add(panelHeader, BorderLayout.NORTH);
         add(panelLateral, BorderLayout.WEST);
         add(panelCentral, BorderLayout.CENTER);
+    
+        iniciarEscuchaUDP();
+
     }
 
     // este metodo crea la barra superior con el titulo y el contador
@@ -97,10 +106,10 @@ public class VentanaPrincipal extends JFrame {
         btnRefrescar.addActionListener(e -> cargarTickets());
 
         btnEnProceso = crearBoton("En Proceso", new Color(255, 193, 7));
-        btnEnProceso.addActionListener(e -> cambiarEstadoSeleccionado("EN_PROCESO"));
+        btnEnProceso.addActionListener(e -> cambiarEstadoREST ("EN_PROCESO"));
 
-        btnCerrado = crearBoton("Marcar Cerrado", new Color(244, 67, 54));
-        btnCerrado.addActionListener(e -> cambiarEstadoSeleccionado("CERRADO"));
+        btnCerrado = crearBoton("Cerrar Ticket", new Color(244, 67, 54));
+        btnCerrado.addActionListener(e -> cambiarEstadoREST("CERRADO"));
 
         JButton btnSalir = crearBoton("Salir", new Color(158, 158, 158));
         btnSalir.addActionListener(e -> System.exit(0));
@@ -110,6 +119,7 @@ public class VentanaPrincipal extends JFrame {
         panelBotones.add(btnEnProceso);
         panelBotones.add(btnCerrado);
         panelBotones.add(btnSalir);
+        panel.add(new JSeparator()); // Separador visual
 
         panel.add(panelBotones, BorderLayout.NORTH);
         return panel;
@@ -133,15 +143,12 @@ public class VentanaPrincipal extends JFrame {
         panel.setBackground(COLOR_BG);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        String[] columnas = { "ID", "Titulo", "Estado", "Prioridad", "Creado en" };
+        String[] columnas = { "ID", "Titulo", "Estado", "Prioridad", "Tecnico" };
         // sobrescribo el modelo para evitar que el usuario edite las celdas directamente
         modelo = new DefaultTableModel(columnas, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
-
         tabla = new JTable(modelo);
         tabla.setFont(new Font("Arial", Font.PLAIN, 11));
         tabla.setRowHeight(25);
@@ -156,7 +163,7 @@ public class VentanaPrincipal extends JFrame {
         JScrollPane scroll = new JScrollPane(tabla);
         scroll.setBackground(COLOR_BG);
 
-        panel.add(scroll, BorderLayout.CENTER);
+        panel.add(new JScrollPane(tabla), BorderLayout.CENTER);
         return panel;
     }
 
@@ -173,91 +180,71 @@ public class VentanaPrincipal extends JFrame {
             protected void done() {
                 try {
                     // cuando termina el hilo secundario, actualizo la interfaz grafica en el hilo principal
-                    List<Map<String,Object>> tickets = get();
+                    List<Map<String,Object>> data = get();
                     modelo.setRowCount(0); // limpio la tabla
-                    for (Map<String,Object> t : tickets) {
+                    for (Map<String,Object> t : data) {
+                        // upgrate: manejo seguro de nulos para el tecnico
+                        Object idTec = t.get("id_tecnico");
+                        String tecnicoStr = (idTec == null || idTec.toString().equals("0")) ? "--libre--" : "Tec. #" + idTec;
                         modelo.addRow(new Object[] {
                             t.get("id"),
                             t.get("titulo"),
                             t.get("estado"),
                             t.get("prioridad"),
-                            t.get("creado_en")
+                            tecnicoStr
                         });
                     }
-                    lblTotal.setText(tickets.size() + " tickets");
-                } catch (Exception ex) {
+                    lblTotal.setText(data.size() + " tickets");
+                } catch (Exception e) {
+                    lblTotal.setText("Error de conexión");
                     JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                            "Error al cargar tickets: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
+                            "Error al cargar tickets: " + e.getMessage());
                 }
             }
         }.execute();
     }
 
     // valido que haya algo seleccionado antes de intentar cambiar el estado
-    private void cambiarEstadoSeleccionado(String nuevoEstado) {
+    private void cambiarEstadoREST(String nuevoEstado) {
         int fila = tabla.getSelectedRow();
-        if (fila < 0) {
+        if (fila == -1) {
             JOptionPane.showMessageDialog(this,
-                    "Por favor selecciona un ticket de la tabla",
-                    "Seleccion requerida",
-                    JOptionPane.WARNING_MESSAGE);
+                    "Por favor selecciona un ticket primero");
             return;
         }
 
         int idTicket = (int) modelo.getValueAt(fila, 0);
-        enviarCambioEstadoTCP(idTicket, nuevoEstado);
-    }
-
-    // uso otro SwingWorker para conectar por TCP socket sin bloquear la ventana
-    private void enviarCambioEstadoTCP(int idTicket, String estado) {
-        new SwingWorker<Void, Void>() {
+        
+        new SwingWorker<Boolean, Void>() {
             @Override
-            protected Void doInBackground() throws Exception {
-                // me conecto al puerto 9090 del servidor para enviar el comando
-                try (Socket socket = new Socket("localhost", 9090);
-                     PrintWriter out = new PrintWriter(
-                             new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
-                     BufferedReader in = new BufferedReader(
-                             new InputStreamReader(socket.getInputStream(), "UTF-8"))) {
+            protected Boolean doInBackground() throws Exception {
+                URL url = new URL(BASE_URL + "/tickets/" + idTicket + "/estado"); // Endpoint correcto
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setRequestMethod("PUT");
+                con.setRequestProperty("Content-Type", "application/json");
+                con.setDoOutput(true);
 
-                    // leo el mensaje de bienvenida del servidor
-                    in.readLine();
+                JSONObject json = new JSONObject();
+                json.put("estado", nuevoEstado);
 
-                    // construyo el comando manualmente con formato parecido a JSON
-                    String comando = "SET_ESTADO {\"id\":" + idTicket + ",\"estado\":\"" + estado + "\"}";
-                    out.println(comando);
-
-                    // verifico si el servidor me respondio OK
-                    String respuesta = in.readLine();
-                    if (respuesta != null && respuesta.startsWith("OK")) {
-                        JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                                "Ticket " + idTicket + " cambio a " + estado,
-                                "Exito",
-                                JOptionPane.INFORMATION_MESSAGE);
-                        // si salio bien, recargo la tabla para ver el cambio reflejado
-                        cargarTickets();
-                    } else {
-                        JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                                "Error: " + respuesta,
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE);
-                    }
+                try (OutputStream os = con.getOutputStream()) {
+                    os.write(json.toString().getBytes(StandardCharsets.UTF_8));
                 }
-                return null;
+
+                return con.getResponseCode() == 200;
             }
 
             @Override
             protected void done() {
-                // manejo cualquier error de conexion que haya ocurrido en el doInBackground
                 try {
-                    get();
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                            "Error al conectar con servidor TCP: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
+                    if (get()) {
+                        cargarTickets(); // Refrescar tabla si tuvo éxito
+                        JOptionPane.showMessageDialog(VentanaPrincipal.this, "Estado actualizado a " + nuevoEstado);
+                    } else {
+                        JOptionPane.showMessageDialog(VentanaPrincipal.this, "Error al actualizar estado.");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }.execute();
@@ -315,18 +302,18 @@ public class VentanaPrincipal extends JFrame {
         dialogo.setVisible(true);
     }
 
-// aqui implemento la creacion via REST manualmente con HttpURLConnection
+// aqui implemento la creacion via REST manualmente con HttpURLConnection 
+//upgrade lo tratamos de hacer muy parecido al de la web
 private void crearTicketViaREST(String titulo, String descripcion) {
-    new SwingWorker<Integer, Void>() {
-        @Override
-        protected Integer doInBackground() throws Exception {
-            try {
-                java.net.URL url = new java.net.URL("http://localhost:8081/tickets");
-                java.net.HttpURLConnection con = (java.net.HttpURLConnection) url.openConnection();
-                
+    new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                URL url = new URL(BASE_URL + "/tickets");
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
                 // configuro para hacer un POST y aviso que mando JSON
                 con.setRequestMethod("POST");
                 con.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                con.setDoOutput(true);
 
                 // construyo el objeto JSON usando la libreria para no batallar con las comillas
                 JSONObject json = new JSONObject();
@@ -335,58 +322,69 @@ private void crearTicketViaREST(String titulo, String descripcion) {
                 json.put("id_cliente", JSONObject.NULL);
                 json.put("id_categoria", JSONObject.NULL);
 
-                String jsonStr = json.toString();
-                byte[] bytes = jsonStr.getBytes("UTF-8");
-
-                // habilito la salida para poder escribir el cuerpo del mensaje
-                con.setDoOutput(true);
-                try (java.io.OutputStream os = con.getOutputStream()) {
-                    os.write(bytes);
+                try (OutputStream os = con.getOutputStream()) {
+                    os.write(json.toString().getBytes(StandardCharsets.UTF_8));
                 }
 
-                // si el codigo es 201 Created es que todo salio bien
-                int status = con.getResponseCode();
-                if (status == 201) {
-                    try (BufferedReader in = new BufferedReader(
-                            new InputStreamReader(con.getInputStream(), "UTF-8"))) {
-                        String respuesta = in.readLine();
-                        JSONObject obj = new JSONObject(respuesta);
-                        return obj.getInt("id");
-                    }
-                } else {
-                    throw new RuntimeException("Error HTTP: " + status);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                return -1;
+                return con.getResponseCode() == 201;
             }
-        }
 
         @Override
         protected void done() {
             try {
-                // verifico si me devolvio un ID valido para confirmar al usuario
-                int idNuevo = get();
-                if (idNuevo > 0) {
-                    JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                            "Ticket creado con ID: " + idNuevo,
-                            "Exito",
-                            JOptionPane.INFORMATION_MESSAGE);
+                if (get()) {
+                    //upgrade: ya no verifico si el id 
                     cargarTickets(); // actualizo la lista automaticamente
+                    JOptionPane.showMessageDialog(VentanaPrincipal.this, "Ticket creado correctamente.");
                 } else {
                     JOptionPane.showMessageDialog(VentanaPrincipal.this,
                             "Error al crear el ticket",
                             "Error",
                             JOptionPane.ERROR_MESSAGE);
                 }
-            } catch (Exception ex) {
+            } catch (Exception e) {
+                e.printStackTrace();
                 JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                        "Error: " + ex.getMessage(),
+                        "Error: " + e.getMessage(),
                         "Error",
                         JOptionPane.ERROR_MESSAGE);
             }
         }
     }.execute();
+}
+
+// Este método inicia el "oído" del cliente en un hilo separado
+private void iniciarEscuchaUDP() {
+    new Thread(() -> {
+        try (java.net.DatagramSocket socket = new java.net.DatagramSocket(9091)) {
+            byte[] buffer = new byte[1024];
+            System.out.println("Cliente escuchando UDP en 9091...");
+            
+            while (true) {
+                java.net.DatagramPacket packet = new java.net.DatagramPacket(buffer, buffer.length);
+                socket.receive(packet);
+                
+                String msg = new String(packet.getData(), 0, packet.getLength(), "UTF-8");
+                
+                // Si recibimos el aviso del servidor...
+                if (msg.startsWith("NUEVO_TICKET")) {
+                    // Actualizamos la interfaz (SwingUtilities es vital aquí para no romper la UI)
+                    SwingUtilities.invokeLater(() -> {
+                        // primero mostramos una alerta bonita (Toast notification)
+                        JOptionPane.showMessageDialog(VentanaPrincipal.this, 
+                            "¡Atención! Se ha creado un nuevo ticket.", 
+                            "Notificación en Tiempo Real", 
+                            JOptionPane.INFORMATION_MESSAGE);
+                        
+                        // despues refrescamos la tabla automaticamente
+                        cargarTickets();
+                    });
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }).start(); // .start() es importante para que corra en paralelo
 }
 
 
